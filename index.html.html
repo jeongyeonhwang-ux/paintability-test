@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>원소재 도장 TEST 진행현황</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Modal Animation */
+        .modal-enter { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="bg-white rounded-2xl shadow-sm p-6 flex flex-col md:flex-row items-start md:items-center justify-between border border-gray-100">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <i class="ph-fill ph-paint-brush text-blue-600"></i>
+                    원소재 도장 TEST 진행현황
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">도장 테스트 일정 및 결과를 기록하고 세부 시험 내역을 관리합니다.</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex gap-4 text-sm font-medium">
+                <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100">
+                    전체: <span id="stat-total" class="font-bold text-lg">0</span>
+                </div>
+                <div class="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg border border-yellow-100">
+                    시험중: <span id="stat-progress" class="font-bold text-lg">0</span>
+                </div>
+                <div class="bg-green-50 text-green-700 px-4 py-2 rounded-lg border border-green-100">
+                    완료: <span id="stat-completed" class="font-bold text-lg">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Data Table Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[750px]">
+            <div class="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/50">
+                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2 shrink-0">
+                    <i class="ph ph-list-dashes text-blue-500"></i>
+                    테스트 기록 목록
+                </h2>
+                
+                <!-- Action Buttons & Search & Filters -->
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                    
+                    <!-- 기간 조회 -->
+                    <div class="flex items-center gap-1 bg-white border border-gray-300 rounded-lg px-2 py-1.5 shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-shadow">
+                        <i class="ph ph-calendar-blank text-gray-400"></i>
+                        <input type="date" id="filter-start" onchange="renderTable()" title="시작일" class="px-1 text-sm outline-none text-gray-600 bg-transparent w-[110px] cursor-pointer">
+                        <span class="text-gray-400 text-xs">~</span>
+                        <input type="date" id="filter-end" onchange="renderTable()" title="종료일" class="px-1 text-sm outline-none text-gray-600 bg-transparent w-[110px] cursor-pointer">
+                    </div>
+
+                    <!-- 검색창 -->
+                    <div class="relative w-full md:w-48 lg:w-56">
+                        <input type="text" id="searchInput" oninput="renderTable()" placeholder="검색 (MAKER 등)" class="w-full px-3 py-1.5 pl-9 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow shadow-sm h-full">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    
+                    <!-- 엑셀 다운로드 -->
+                    <button onclick="exportToExcel()" class="text-sm text-green-700 hover:text-green-800 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-green-200 hover:border-green-300 hover:bg-green-50 transition-colors bg-white shadow-sm">
+                        <i class="ph ph-file-xls text-lg"></i>
+                        <span class="hidden sm:inline">엑셀 다운로드</span>
+                    </button>
+
+                    <!-- 전체 삭제 -->
+                    <button onclick="clearAllData()" class="text-sm text-gray-500 hover:text-red-600 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-200 hover:bg-red-50 transition-colors bg-white shadow-sm">
+                        <i class="ph ph-trash text-lg"></i>
+                        <span class="hidden lg:inline">전체 삭제</span>
+                    </button>
+                    
+                    <!-- 신규 데이터 입력 -->
+                    <button onclick="openAddModal()" class="text-sm text-white flex items-center gap-1 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm">
+                        <i class="ph ph-plus-circle text-lg"></i>
+                        신규 입력
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-auto p-0 relative">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">접수 일자</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">MAKER</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">제조국</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">품종</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">도금상태</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">상태</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">비고</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-100 bg-white">
+                        <!-- JS 데이터 삽입 -->
+                    </tbody>
+                </table>
+                
+                <!-- 빈 데이터 상태 -->
+                <div id="emptyState" class="hidden absolute inset-0 flex-col items-center justify-center bg-white z-0 text-gray-400">
+                    <i class="ph ph-folder-open text-6xl mb-3 text-gray-200"></i>
+                    <p class="text-base text-gray-500 font-medium">표시할 테스트 기록이 없습니다.</p>
+                    <p class="text-sm mt-1">새로운 데이터를 등록하거나 검색/기간 필터를 확인해주세요.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== [MODAL] 신규 데이터 입력 ==================== -->
+    <div id="addModal" class="hidden fixed inset-0 bg-gray-900/40 z-50 items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden modal-enter flex flex-col max-h-full">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg text-gray-800">신규 데이터 입력</h3>
+                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form id="testForm" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">접수 일자 <span class="text-red-500">*</span></label>
+                            <input type="date" id="add-date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">상태 <span class="text-red-500">*</span></label>
+                            <select id="add-status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                                <option value="접수중">접수중</option>
+                                <option value="시험중">시험중</option>
+                                <option value="보류">보류</option>
+                                <option value="합격">합격</option>
+                                <option value="불합격">불합격</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">MAKER <span class="text-red-500">*</span></label>
+                            <input type="text" id="add-maker" required placeholder="예: 포스코" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">제조국 <span class="text-red-500">*</span></label>
+                            <input type="text" id="add-country" required placeholder="예: 대한민국" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">품종 <span class="text-red-500">*</span></label>
+                        <select id="add-itemType" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            <option value="">선택하세요</option>
+                            <option value="ZM(GIX)">ZM(GIX)</option>
+                            <option value="ZM(GLX)">ZM(GLX)</option>
+                            <option value="AL">AL</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">도금상태 <span class="text-red-500">*</span></label>
+                        <input type="text" id="add-platingStatus" required placeholder="예: ZM120g(Zn-AL5~7%-Mg1.5~2%)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">비고(기본 특이사항)</label>
+                        <textarea id="add-remarks" rows="2" placeholder="기본 특이사항 입력" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
+                <button type="button" onclick="closeAddModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+                <button type="button" onclick="submitAddForm()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">등록하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== [MODAL] 세부 시험 내용 기록 ==================== -->
+    <div id="detailModal" class="hidden fixed inset-0 bg-gray-900/60 z-50 items-center justify-center backdrop-blur-sm p-4 md:p-8">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden modal-enter flex flex-col h-full max-h-[900px]">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-800 text-white shrink-0">
+                <div>
+                    <h3 class="font-bold text-lg flex items-center gap-2">
+                        <i class="ph ph-file-text"></i> 시험 상세 기록
+                    </h3>
+                </div>
+                <button onclick="closeDetailModal()" class="text-gray-300 hover:text-white transition-colors"><i class="ph ph-x text-2xl"></i></button>
+            </div>
+            
+            <!-- Body -->
+            <div class="p-6 overflow-y-auto flex-1 bg-gray-50/50">
+                
+                <!-- 상단: 상태 변경 및 MCT 첨부 -->
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm font-bold text-gray-700">현재 진행 상태:</label>
+                        <select id="det-status" class="w-36 px-3 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium">
+                            <option value="접수중">접수중</option>
+                            <option value="시험중">시험중</option>
+                            <option value="보류">보류</option>
+                            <option value="합격">합격</option>
+                            <option value="불합격">불합격</option>
+                        </select>
+                    </div>
+                    <div class="flex items-start md:items-center gap-3">
+                        <label class="text-sm font-bold text-gray-700 mt-1.5 md:mt-0">MCT 첨부파일:</label>
+                        <div class="flex flex-col gap-2">
+                            <div>
+                                <input type="file" id="file-mct" multiple class="hidden" onchange="handleFileSelect(this, 'mct')">
+                                <button onclick="document.getElementById('file-mct').click()" class="text-xs bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-1.5 rounded flex items-center gap-1 transition-colors">
+                                    <i class="ph ph-upload-simple"></i> 파일 선택
+                                </button>
+                            </div>
+                            <!-- 선택된 파일명 표시 영역 (다중) -->
+                            <div id="disp-mct" class="hidden flex-col gap-1 w-full max-w-sm"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 상단: 기본 정보 수정 폼 -->
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6">
+                    <h4 class="font-bold text-gray-800 border-b border-gray-100 pb-2 mb-4 text-sm flex items-center gap-1">
+                        <i class="ph ph-identification-card text-blue-500"></i> 기본 정보 (수정 가능)
+                    </h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">접수 일자</label>
+                            <input type="date" id="det-base-date" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">MAKER</label>
+                            <input type="text" id="det-base-maker" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">제조국</label>
+                            <input type="text" id="det-base-country" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">품종</label>
+                            <select id="det-base-itemType" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                                <option value="ZM(GIX)">ZM(GIX)</option>
+                                <option value="ZM(GLX)">ZM(GLX)</option>
+                                <option value="AL">AL</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs text-gray-500 mb-1">도금상태</label>
+                            <input type="text" id="det-base-platingStatus" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                        <div class="col-span-2 md:col-span-3 lg:col-span-6">
+                            <label class="block text-xs text-gray-500 mb-1">비고 (기본 특이사항)</label>
+                            <input type="text" id="det-base-remarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 메인 세부 항목들 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    <!-- 섹션 1: 규격 및 도금량 -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm lg:col-span-1 flex flex-col">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
+                            <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-ruler text-blue-500"></i> 규격 및 도금량</h4>
+                            <div class="flex flex-col items-end gap-1">
+                                <input type="file" id="file-spec" multiple class="hidden" onchange="handleFileSelect(this, 'spec')">
+                                <button onclick="document.getElementById('file-spec').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
+                            </div>
+                        </div>
+                        <div class="space-y-3 flex-1">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">호칭 두께(T)</label>
+                                <input type="text" id="det-thickness" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">측정 두께</label>
+                                <input type="text" id="det-realThickness" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">도금량 (g/m²)</label>
+                                <input type="text" id="det-coatingTarget" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">측정 도금량 (g/m²)</label>
+                                <input type="text" id="det-coatingReal" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-50">
+                            <!-- 파일명 표시 영역 -->
+                            <div id="disp-spec" class="hidden flex-col gap-1 mb-2"></div>
+                            <label class="block text-xs text-gray-500 mb-1">비고</label>
+                            <input type="text" id="det-specRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 섹션 2: 기계적 물성 -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm lg:col-span-1 flex flex-col">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
+                            <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-wrench text-blue-500"></i> 기계적 물성</h4>
+                            <div class="flex flex-col items-end gap-1">
+                                <input type="file" id="file-mech" multiple class="hidden" onchange="handleFileSelect(this, 'mech')">
+                                <button onclick="document.getElementById('file-mech').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 flex-1">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">TS (N/mm²)</label>
+                                <input type="text" id="det-ts" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">YP (N/mm²)</label>
+                                <input type="text" id="det-yp" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">EL (%)</label>
+                                <input type="text" id="det-el" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">경도</label>
+                                <input type="text" id="det-hardness" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-xs text-gray-500 mb-1">조도</label>
+                                <input type="text" id="det-roughness" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-50">
+                            <div id="disp-mech" class="hidden flex-col gap-1 mb-2"></div>
+                            <label class="block text-xs text-gray-500 mb-1">비고</label>
+                            <input type="text" id="det-mechRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 섹션 3: 성분 분석 (ESEM) -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm lg:col-span-1 flex flex-col">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
+                            <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-flask text-blue-500"></i> 무기 성분 분석 (%)</h4>
+                            <div class="flex flex-col items-end gap-1">
+                                <input type="file" id="file-comp" multiple class="hidden" onchange="handleFileSelect(this, 'comp')">
+                                <button onclick="document.getElementById('file-comp').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 flex-1">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">C</label>
+                                <input type="text" id="det-compC" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">O</label>
+                                <input type="text" id="det-compO" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Mg</label>
+                                <input type="text" id="det-compMg" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Al</label>
+                                <input type="text" id="det-compAl" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Fe</label>
+                                <input type="text" id="det-compFe" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Zn</label>
+                                <input type="text" id="det-compZn" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-50">
+                            <div id="disp-comp" class="hidden flex-col gap-1 mb-2"></div>
+                            <label class="block text-xs text-gray-500 mb-1">비고</label>
+                            <input type="text" id="det-compRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 섹션 4: 도장 시험 결과 (당사) -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm md:col-span-2 lg:col-span-3">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
+                            <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-check-square text-blue-500"></i> 도장 시험 결과 (당사)</h4>
+                            <div class="flex flex-col items-end gap-1">
+                                <input type="file" id="file-paint" multiple class="hidden" onchange="handleFileSelect(this, 'paint')">
+                                <button onclick="document.getElementById('file-paint').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            
+                            <!-- M.E.K -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">M.E.K Rubbing</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-mekStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-mekMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 가공성 -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">가공성 (T-BEND)</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-tbendStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-tbendMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- C.E.T. -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">C.E.T.</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-cetStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-cetMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- IMPACT -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">IMPACT</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-impactStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-impactMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-gray-50">
+                            <div id="disp-paint" class="hidden flex-col gap-1 mb-2 max-w-sm"></div>
+                            <label class="block text-xs text-gray-500 mb-1">비고 (당사 결과 특이사항)</label>
+                            <input type="text" id="det-paintRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 섹션 5: 도장 시험 결과 (외부/도료사) -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm md:col-span-2 lg:col-span-3">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
+                            <!-- 타이틀: 도장 시험 결과 (도료사) - 괄호 안 텍스트 수정 가능 -->
+                            <div class="flex items-center gap-1 mt-1">
+                                <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1"><i class="ph ph-check-square text-blue-500"></i> 도장 시험 결과 (</h4>
+                                <input type="text" id="det-extTitle" placeholder="도료사" class="font-bold text-blue-600 text-sm bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 outline-none w-24 text-center pb-0.5">
+                                <h4 class="font-bold text-gray-800 text-sm">)</h4>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <input type="file" id="file-ext" multiple class="hidden" onchange="handleFileSelect(this, 'ext')">
+                                <button onclick="document.getElementById('file-ext').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            
+                            <!-- M.E.K -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">M.E.K Rubbing</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-extMekStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-extMekMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 가공성 -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">가공성 (T-BEND)</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-extTbendStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-extTbendMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- C.E.T. -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">C.E.T.</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-extCetStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-extCetMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- IMPACT -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-2">IMPACT</label>
+                                <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 space-y-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 font-medium w-11 shrink-0 text-right">기준치</span>
+                                        <input type="text" id="det-extImpactStd" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-600 font-medium w-11 shrink-0 text-right">측정치</span>
+                                        <input type="text" id="det-extImpactMeas" class="w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white transition-shadow">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-gray-50">
+                            <div id="disp-ext" class="hidden flex-col gap-1 mb-2 max-w-sm"></div>
+                            <label class="block text-xs text-gray-500 mb-1">비고 (도료사 결과 특이사항)</label>
+                            <input type="text" id="det-extRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 섹션 6: 결론 -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm md:col-span-2 lg:col-span-3">
+                        <h4 class="font-bold text-gray-800 border-b border-gray-100 pb-2 mb-4 text-sm flex items-center gap-1"><i class="ph ph-chat-text text-blue-500"></i> 종합 결론 및 의견</h4>
+                        <textarea id="det-conclusion" rows="3" placeholder="최종 판정 및 원소재 Crack 발생 여부 등 상세 내용 기술" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"></textarea>
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2 bg-white shrink-0">
+                <button onclick="closeDetailModal()" class="px-5 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">닫기</button>
+                <button onclick="saveDetailData()" class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"><i class="ph ph-floppy-disk"></i> 저장 및 수정완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== [MODAL] 파일 미리보기 ==================== -->
+    <div id="previewModal" class="hidden fixed inset-0 bg-gray-900/80 z-[60] items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
+                <h3 id="preview-title" class="font-bold text-gray-800 truncate pr-4 text-sm flex items-center gap-2">
+                    <i class="ph ph-file"></i> <span id="preview-filename">파일명</span>
+                </h3>
+                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-700 transition-colors"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div id="preview-content" class="p-4 flex-1 overflow-auto bg-gray-100 flex items-center justify-center">
+                <!-- 이미지 또는 PDF 표시 영역 -->
+            </div>
+            <div class="px-4 py-3 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
+                <button onclick="closePreviewModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">닫기</button>
+                <button id="preview-download-btn" class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center gap-1 shadow-sm">
+                    <i class="ph ph-download-simple text-lg"></i> 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Script (type="module") -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCKeuSbvuaUt9MVKhsSIihUKW-cngA4wgo",
+            authDomain: "test-ba675.firebaseapp.com",
+            projectId: "test-ba675",
+            storageBucket: "test-ba675.firebasestorage.app",
+            messagingSenderId: "541408241073",
+            appId: "1:541408241073:web:2f4d1549669925d1dfc990",
+            measurementId: "G-Y9DXDR1LY3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const COLLECTION_NAME = "coatingTestRecords"; // Firestore에 저장될 컬렉션 이름
+
+        let records = [];
+        let currentEditId = null;
+        let tempFiles = {}; 
+
+        const tableBody = document.getElementById('tableBody');
+        const emptyState = document.getElementById('emptyState');
+
+        const baseFields = ['date', 'maker', 'country', 'itemType', 'platingStatus', 'remarks'];
+
+        const detailFields = [
+            'thickness', 'realThickness', 'coatingTarget', 'coatingReal', 'specRemarks',
+            'ts', 'yp', 'el', 'hardness', 'roughness', 'mechRemarks',
+            'compC', 'compO', 'compMg', 'compAl', 'compFe', 'compZn', 'compRemarks',
+            // 당사 시험
+            'mekStd', 'mekMeas', 'tbendStd', 'tbendMeas', 'cetStd', 'cetMeas', 'impactStd', 'impactMeas', 'paintRemarks',
+            // 외부(도료사) 시험
+            'extTitle',
+            'extMekStd', 'extMekMeas',
+            'extTbendStd', 'extTbendMeas',
+            'extCetStd', 'extCetMeas',
+            'extImpactStd', 'extImpactMeas',
+            'extRemarks',
+            'conclusion'
+        ];
+
+        const fileFields = ['mct', 'spec', 'mech', 'comp', 'paint', 'ext'];
+
+        // 초기화 함수 (데이터베이스에서 불러오기)
+        async function init() {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            const lastYear = new Date();
+            lastYear.setFullYear(today.getFullYear() - 1);
+            const lastYearStr = lastYear.toISOString().split('T')[0];
+
+            document.getElementById('add-date').value = todayStr;
+            document.getElementById('filter-start').value = lastYearStr;
+            document.getElementById('filter-end').value = todayStr;
+
+            try {
+                // Firestore에서 모든 데이터 가져오기
+                const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+                records = [];
+                querySnapshot.forEach((doc) => {
+                    records.push(doc.data());
+                });
+            } catch (error) {
+                console.error("Firebase 데이터 로드 오류:", error);
+                alert("데이터베이스에서 기록을 불러오는데 실패했습니다.");
+            }
+
+            renderTable();
+        }
+
+        // ================= 다중 첨부파일 로직 =================
+        function handleFileSelect(input, type) {
+            if (!input.files || input.files.length === 0) return;
+            
+            if (!tempFiles[type]) tempFiles[type] = [];
+
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    tempFiles[type].push({
+                        name: file.name,
+                        data: e.target.result,
+                        mimeType: file.type
+                    });
+                    renderFileList(type);
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = ''; 
+        }
+
+        function removeFile(type, index) {
+            if (tempFiles[type]) {
+                tempFiles[type].splice(index, 1);
+                renderFileList(type);
+            }
+        }
+
+        function renderFileList(type) {
+            const container = document.getElementById(`disp-${type}`);
+            container.innerHTML = '';
+            
+            const files = tempFiles[type] || [];
+            if (files.length > 0) {
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+                
+                files.forEach((f, idx) => {
+                    const item = document.createElement('div');
+                    item.className = "flex items-center justify-between bg-blue-50 px-2 py-1.5 rounded text-xs text-blue-700 border border-blue-100 w-full";
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = "truncate mr-2 cursor-pointer underline font-medium hover:text-blue-800 transition-colors flex-1";
+                    nameSpan.textContent = f.name;
+                    nameSpan.onclick = () => previewFile(type, idx);
+                    
+                    const delBtn = document.createElement('button');
+                    delBtn.className = "text-blue-400 hover:text-blue-600 ml-2";
+                    delBtn.innerHTML = '<i class="ph ph-x text-sm"></i>';
+                    delBtn.onclick = () => removeFile(type, idx);
+                    
+                    item.appendChild(nameSpan);
+                    item.appendChild(delBtn);
+                    container.appendChild(item);
+                });
+            } else {
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+            }
+        }
+
+        function previewFile(type, index) {
+            const fileObj = tempFiles[type][index];
+            if(!fileObj) return;
+
+            if(!fileObj.data) {
+                alert('파일의 데이터가 존재하지 않습니다.');
+                return;
+            }
+
+            const modal = document.getElementById('previewModal');
+            document.getElementById('preview-filename').textContent = fileObj.name;
+            const content = document.getElementById('preview-content');
+            const downloadBtn = document.getElementById('preview-download-btn');
+            
+            content.innerHTML = ''; 
+            
+            if (fileObj.mimeType.startsWith('image/')) {
+                content.innerHTML = `<img src="${fileObj.data}" class="max-w-full max-h-full object-contain mx-auto shadow-sm">`;
+            } else if (fileObj.mimeType === 'application/pdf') {
+                content.innerHTML = `<iframe src="${fileObj.data}" class="w-full h-[65vh] border-0 rounded"></iframe>`;
+            } else {
+                content.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="ph ph-file-text text-6xl mb-2 text-gray-300"></i><p>미리보기를 지원하지 않는 파일 형식입니다.<br>다운로드하여 확인해주세요.</p></div>`;
+            }
+            
+            downloadBtn.onclick = () => {
+                const a = document.createElement('a');
+                a.href = fileObj.data;
+                a.download = fileObj.name;
+                a.click();
+            };
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePreviewModal() {
+            const modal = document.getElementById('previewModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('preview-content').innerHTML = '';
+        }
+
+        // ================= 신규 데이터 등록 (Firestore) =================
+        function openAddModal() {
+            document.getElementById('addModal').classList.remove('hidden');
+            document.getElementById('addModal').classList.add('flex');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+            document.getElementById('addModal').classList.remove('flex');
+            document.getElementById('testForm').reset();
+            document.getElementById('add-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        async function submitAddForm() {
+            const form = document.getElementById('testForm');
+            if(!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const newRecord = {
+                id: Date.now().toString(),
+                date: document.getElementById('add-date').value,
+                maker: document.getElementById('add-maker').value,
+                country: document.getElementById('add-country').value,
+                itemType: document.getElementById('add-itemType').value,
+                platingStatus: document.getElementById('add-platingStatus').value,
+                status: document.getElementById('add-status').value,
+                remarks: document.getElementById('add-remarks').value,
+                details: {} 
+            };
+
+            try {
+                // Firestore 문서 추가
+                await setDoc(doc(db, COLLECTION_NAME, newRecord.id), newRecord);
+                
+                // 로컬 배열 추가 및 테이블 갱신
+                records.push(newRecord);
+                document.getElementById('searchInput').value = '';
+                renderTable();
+                closeAddModal();
+            } catch (error) {
+                console.error("데이터 등록 오류:", error);
+                alert("데이터 저장에 실패했습니다.");
+            }
+        }
+
+        // ================= 세부 정보(상세 모달) =================
+        function openDetailModal(id) {
+            const record = records.find(r => r.id === id);
+            if (!record) return;
+            currentEditId = id;
+            tempFiles = {}; 
+            
+            document.getElementById('det-status').value = record.status;
+
+            baseFields.forEach(field => {
+                document.getElementById(`det-base-${field}`).value = record[field] || '';
+            });
+
+            const det = record.details || {};
+            detailFields.forEach(field => {
+                let val = det[field] || '';
+
+                if (!val) {
+                    if (field === 'mekStd' || field === 'extMekStd') val = '50회';
+                    if (field === 'tbendStd' || field === 'extTbendStd') val = '2TT 4점(박리 없음)';
+                    if (field === 'cetStd' || field === 'extCetStd') val = '100/100(박리 없음)';
+                    if (field === 'impactStd' || field === 'extImpactStd') val = '5점(박리없음)';
+                }
+                
+                const el = document.getElementById(`det-${field}`);
+                if(el) el.value = val;
+            });
+
+            fileFields.forEach(type => {
+                tempFiles[type] = [];
+                const oldFiles = det[`${type}Files`];
+                if (oldFiles && Array.isArray(oldFiles)) {
+                    tempFiles[type] = [...oldFiles];
+                }
+                renderFileList(type);
+            });
+
+            document.getElementById('detailModal').classList.remove('hidden');
+            document.getElementById('detailModal').classList.add('flex');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+            document.getElementById('detailModal').classList.remove('flex');
+            currentEditId = null;
+        }
+
+        async function saveDetailData() {
+            if (!currentEditId) return;
+            const recordIndex = records.findIndex(r => r.id === currentEditId);
+            if (recordIndex === -1) return;
+
+            // 로컬 객체 업데이트 준비
+            const updatedRecord = { ...records[recordIndex] };
+            updatedRecord.status = document.getElementById('det-status').value;
+
+            baseFields.forEach(field => {
+                updatedRecord[field] = document.getElementById(`det-base-${field}`).value;
+            });
+
+            const updatedDetails = {};
+            detailFields.forEach(field => {
+                const el = document.getElementById(`det-${field}`);
+                if(el) updatedDetails[field] = el.value;
+            });
+
+            fileFields.forEach(type => {
+                updatedDetails[`${type}Files`] = tempFiles[type] || [];
+            });
+
+            updatedRecord.details = updatedDetails;
+            
+            try {
+                // Firestore 문서 업데이트
+                await setDoc(doc(db, COLLECTION_NAME, currentEditId), updatedRecord);
+                
+                // 성공 시 로컬 배열 업데이트 및 렌더링
+                records[recordIndex] = updatedRecord;
+                renderTable();
+                closeDetailModal();
+                alert('정보가 성공적으로 저장되었습니다.');
+            } catch (error) {
+                if (error.code === 'resource-exhausted' || (error.message && error.message.includes('maximum'))) {
+                    alert('저장 실패: 첨부파일의 용량이 너무 큽니다. (1회당 최대 1MB 권장) 불필요한 파일을 지우고 다시 시도하세요.');
+                } else {
+                    console.error("데이터베이스 업데이트 오류:", error);
+                    alert('정보 저장 중 오류가 발생했습니다.');
+                }
+            }
+        }
+
+
+        // ================= 테이블 UI =================
+        function getStatusBadge(status) {
+            switch(status) {
+                case '접수중': return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200">접수중</span>`;
+                case '시험중': return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">시험중</span>`;
+                case '보류':   return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 border border-purple-200">보류</span>`;
+                case '합격':   return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 border border-green-200">합격</span>`;
+                case '불합격': return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 border border-red-200">불합격</span>`;
+                default:       return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200">${status}</span>`;
+            }
+        }
+
+        function renderTable() {
+            const searchTerm = (document.getElementById('searchInput')?.value || '').toLowerCase();
+            const filterStart = document.getElementById('filter-start')?.value;
+            const filterEnd = document.getElementById('filter-end')?.value;
+
+            let filteredRecords = records;
+            
+            if (searchTerm) {
+                filteredRecords = filteredRecords.filter(r => {
+                    const searchString = `${r.maker} ${r.country} ${r.itemType} ${r.platingStatus} ${r.remarks}`.toLowerCase();
+                    return searchString.includes(searchTerm);
+                });
+            }
+
+            if (filterStart) {
+                filteredRecords = filteredRecords.filter(r => r.date >= filterStart);
+            }
+            if (filterEnd) {
+                filteredRecords = filteredRecords.filter(r => r.date <= filterEnd);
+            }
+
+            filteredRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+            tableBody.innerHTML = '';
+            
+            if (filteredRecords.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+
+                filteredRecords.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-blue-50/50 transition-colors group cursor-pointer border-b border-gray-50';
+                    tr.onclick = () => openDetailModal(record.id);
+                    
+                    tr.innerHTML = `
+                        <td class="py-4 px-4 text-sm text-gray-600">${record.date}</td>
+                        <td class="py-4 px-4 text-sm font-medium text-gray-900">${record.maker || '-'}</td>
+                        <td class="py-4 px-4 text-sm text-gray-600">${record.country || '-'}</td>
+                        <td class="py-4 px-4 text-sm text-gray-600">${record.itemType || '-'}</td>
+                        <td class="py-4 px-4 text-sm text-gray-600">${record.platingStatus || '-'}</td>
+                        <td class="py-4 px-4 text-sm">${getStatusBadge(record.status)}</td>
+                        <td class="py-4 px-4 text-sm text-gray-500 max-w-[200px] truncate" title="${record.remarks}">${record.remarks || '-'}</td>
+                        <td class="py-4 px-4 text-sm text-center">
+                            <button onclick="deleteRecord(event, '${record.id}')" class="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50">
+                                <i class="ph ph-trash text-lg"></i>
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+            updateStats(filteredRecords);
+        }
+
+        async function deleteRecord(event, id) {
+            event.stopPropagation();
+            if(confirm('이 기록을 정말 삭제하시겠습니까?')) {
+                try {
+                    // Firestore에서 삭제
+                    await deleteDoc(doc(db, COLLECTION_NAME, id));
+                    
+                    // 로컬 반영
+                    records = records.filter(record => record.id !== id);
+                    renderTable();
+                } catch (error) {
+                    console.error("문서 삭제 중 오류:", error);
+                    alert("삭제에 실패했습니다.");
+                }
+            }
+        }
+
+        async function clearAllData() {
+            if(records.length === 0) return;
+            if(confirm('모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                try {
+                    // Firestore 일괄 삭제
+                    const batch = writeBatch(db);
+                    records.forEach(r => {
+                        batch.delete(doc(db, COLLECTION_NAME, r.id));
+                    });
+                    await batch.commit();
+
+                    records = [];
+                    renderTable();
+                    alert("모든 데이터가 삭제되었습니다.");
+                } catch (error) {
+                    console.error("일괄 삭제 오류:", error);
+                    alert("데이터 초기화에 실패했습니다.");
+                }
+            }
+        }
+
+        function updateStats(filteredRecords) {
+            const total = filteredRecords.length;
+            const progress = filteredRecords.filter(r => r.status === '시험중').length;
+            const completed = filteredRecords.filter(r => r.status === '합격' || r.status === '불합격').length;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-progress').textContent = progress;
+            document.getElementById('stat-completed').textContent = completed;
+        }
+
+        // ================= 엑셀 다운로드 (SheetJS) =================
+        function exportToExcel() {
+            if (records.length === 0) {
+                alert('내보낼 데이터가 없습니다.');
+                return;
+            }
+
+            const excelData = records.map(record => {
+                const det = record.details || {};
+                return {
+                    '접수 일자': record.date || '',
+                    '진행 상태': record.status || '',
+                    'MAKER': record.maker || '',
+                    '제조국': record.country || '',
+                    '품종': record.itemType || '',
+                    '도금 상태': record.platingStatus || '',
+                    '기본 비고': record.remarks || '',
+                    
+                    '호칭 두께(T)': det.thickness || '',
+                    '측정 두께': det.realThickness || '',
+                    '도금량(g/m²)': det.coatingTarget || '',
+                    '측정 도금량(g/m²)': det.coatingReal || '',
+                    '규격 비고': det.specRemarks || '',
+                    
+                    'TS (N/mm²)': det.ts || '',
+                    'YP (N/mm²)': det.yp || '',
+                    'EL (%)': det.el || '',
+                    '경도': det.hardness || '',
+                    '조도': det.roughness || '',
+                    '기계물성 비고': det.mechRemarks || '',
+                    
+                    'C (%)': det.compC || '',
+                    'O (%)': det.compO || '',
+                    'Mg (%)': det.compMg || '',
+                    'Al (%)': det.compAl || '',
+                    'Fe (%)': det.compFe || '',
+                    'Zn (%)': det.compZn || '',
+                    '성분분석 비고': det.compRemarks || '',
+                    
+                    'M.E.K (당사기준)': det.mekStd || '',
+                    'M.E.K (당사측정)': det.mekMeas || '',
+                    'T-BEND (당사기준)': det.tbendStd || '',
+                    'T-BEND (당사측정)': det.tbendMeas || '',
+                    'C.E.T (당사기준)': det.cetStd || '',
+                    'C.E.T (당사측정)': det.cetMeas || '',
+                    'IMPACT (당사기준)': det.impactStd || '',
+                    'IMPACT (당사측정)': det.impactMeas || '',
+                    '당사결과 비고': det.paintRemarks || '',
+                    
+                    '도료사명': det.extTitle || '',
+                    'M.E.K (도료사기준)': det.extMekStd || '',
+                    'M.E.K (도료사측정)': det.extMekMeas || '',
+                    'T-BEND (도료사기준)': det.extTbendStd || '',
+                    'T-BEND (도료사측정)': det.extTbendMeas || '',
+                    'C.E.T (도료사기준)': det.extCetStd || '',
+                    'C.E.T (도료사측정)': det.extCetMeas || '',
+                    'IMPACT (도료사기준)': det.extImpactStd || '',
+                    'IMPACT (도료사측정)': det.extImpactMeas || '',
+                    '도료사결과 비고': det.extRemarks || '',
+
+                    '종합 결론': det.conclusion || ''
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            
+            const wscols = Object.keys(excelData[0]).map(() => ({ wch: 15 }));
+            worksheet['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, "테스트 현황");
+            
+            const today = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `원소재_도장TEST_진행현황_${today}.xlsx`);
+        }
+
+        // ES Module 환경에서 HTML의 onclick 등 속성으로 함수를 호출하려면 window 객체에 등록해야 합니다.
+        window.renderTable = renderTable;
+        window.exportToExcel = exportToExcel;
+        window.clearAllData = clearAllData;
+        window.openAddModal = openAddModal;
+        window.closeAddModal = closeAddModal;
+        window.submitAddForm = submitAddForm;
+        window.closeDetailModal = closeDetailModal;
+        window.saveDetailData = saveDetailData;
+        window.handleFileSelect = handleFileSelect;
+        window.removeFile = removeFile;
+        window.previewFile = previewFile;
+        window.closePreviewModal = closePreviewModal;
+        window.deleteRecord = deleteRecord;
+
+        init();
+    </script>
+</body>
+</html>

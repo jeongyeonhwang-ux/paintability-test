@@ -44,15 +44,36 @@
                 </h1>
                 <p class="text-sm text-gray-500 mt-1">도장 테스트 일정 및 결과를 기록하고 세부 시험 내역을 관리합니다.</p>
             </div>
-            <div class="mt-4 md:mt-0 flex gap-4 text-sm font-medium">
-                <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100">
-                    전체: <span id="stat-total" class="font-bold text-lg">0</span>
+            <div class="mt-4 md:mt-0 flex flex-wrap items-center gap-4 text-sm font-medium">
+                <!-- 통계 -->
+                <div class="hidden lg:flex gap-4">
+                    <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100">
+                        전체: <span id="stat-total" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg border border-yellow-100">
+                        시험중: <span id="stat-progress" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-green-50 text-green-700 px-4 py-2 rounded-lg border border-green-100">
+                        완료: <span id="stat-completed" class="font-bold text-lg">0</span>
+                    </div>
                 </div>
-                <div class="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg border border-yellow-100">
-                    시험중: <span id="stat-progress" class="font-bold text-lg">0</span>
-                </div>
-                <div class="bg-green-50 text-green-700 px-4 py-2 rounded-lg border border-green-100">
-                    완료: <span id="stat-completed" class="font-bold text-lg">0</span>
+
+                <!-- 구분선 -->
+                <div class="hidden lg:block w-px h-8 bg-gray-200"></div>
+
+                <!-- 구글 로그인 / 유저 정보 영역 -->
+                <div class="flex items-center">
+                    <button id="login-btn" onclick="loginWithGoogle()" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-4 h-4">
+                        구글 로그인
+                    </button>
+                    <div id="user-info" class="hidden flex items-center gap-3 bg-gray-50 px-4 py-1.5 rounded-lg border border-gray-200">
+                        <div class="flex flex-col">
+                            <span id="user-name" class="text-xs font-bold text-gray-800"></span>
+                            <span class="text-[10px] text-gray-500">접속중</span>
+                        </div>
+                        <button onclick="logout()" class="text-xs text-gray-500 hover:text-red-600 underline ml-2">로그아웃</button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -207,11 +228,11 @@
                 <button onclick="closeDetailModal()" class="text-gray-300 hover:text-white transition-colors"><i class="ph ph-x text-2xl"></i></button>
             </div>
             
-            <!-- 첨부파일 용량 경고 문구 추가 -->
+            <!-- 첨부파일 용량 경고 문구 -->
             <div class="bg-red-50 px-6 py-2 border-b border-red-100 shrink-0">
                 <p class="text-red-600 text-xs font-bold flex items-center gap-1">
                     <i class="ph-fill ph-warning-circle text-sm"></i>
-                    첨부파일 용량 안내: 개별 파일당 최대 10MB 이하를 권장합니다.
+                    첨부파일 용량 안내: 스토리지 미사용으로 인해 모든 첨부파일 합산 최대 700KB 이하만 저장 가능합니다.
                 </p>
             </div>
 
@@ -599,7 +620,12 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        
+        // 💡 [추후 스토리지 연동 시 수정할 부분] 
+        // 1. 아래의 주석을 풀고 Storage 관련 함수를 불러옵니다.
+        // import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCKeuSbvuaUt9MVKhsSIihUKW-cngA4wgo",
@@ -613,13 +639,19 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
-        const COLLECTION_NAME = "coatingTestRecords"; // Firestore에 저장될 컬렉션 이름
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider(); 
+        
+        // 💡 [추후 스토리지 연동 시 수정할 부분] 
+        // 2. 아래 주석을 풀어 storage 변수를 활성화합니다.
+        // const storage = getStorage(app);
+        // let filesToDelete = []; // 삭제 예정인 Storage 파일 경로를 담을 배열도 다시 활성화하세요.
+
+        const COLLECTION_NAME = "coatingTestRecords"; 
 
         let records = [];
         let currentEditId = null;
         let tempFiles = {}; 
-        let filesToDelete = []; // 삭제 예정인 Storage 파일 경로
 
         const tableBody = document.getElementById('tableBody');
         const emptyState = document.getElementById('emptyState');
@@ -630,81 +662,131 @@
             'thickness', 'realThickness', 'coatingTarget', 'coatingReal', 'specRemarks',
             'ts', 'yp', 'el', 'hardness', 'roughness', 'mechRemarks',
             'compC', 'compO', 'compMg', 'compAl', 'compFe', 'compZn', 'compRemarks',
-            // 당사 시험
             'mekStd', 'mekMeas', 'tbendStd', 'tbendMeas', 'cetStd', 'cetMeas', 'impactStd', 'impactMeas', 'paintRemarks',
-            // 외부(도료사) 시험
-            'extTitle',
-            'extMekStd', 'extMekMeas',
-            'extTbendStd', 'extTbendMeas',
-            'extCetStd', 'extCetMeas',
-            'extImpactStd', 'extImpactMeas',
-            'extRemarks',
+            'extTitle', 'extMekStd', 'extMekMeas', 'extTbendStd', 'extTbendMeas', 'extCetStd', 'extCetMeas', 'extImpactStd', 'extImpactMeas', 'extRemarks',
             'conclusion'
         ];
 
         const fileFields = ['mct', 'paint', 'ext'];
 
-        // 초기화 함수 (데이터베이스에서 불러오기)
+        // ================= 구글/익명 인증 통합 로직 =================
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('user-info').classList.add('flex');
+                
+                if(user.isAnonymous) {
+                    document.getElementById('user-name').textContent = "익명 사용자";
+                } else {
+                    document.getElementById('user-name').textContent = user.displayName || user.email;
+                }
+                
+                loadDataFromFirestore();
+            } else {
+                document.getElementById('login-btn').classList.remove('hidden');
+                document.getElementById('user-info').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('flex');
+                records = [];
+                renderTable();
+            }
+        });
+
+        async function loginWithGoogle() {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login failed:", error);
+                alert("구글 로그인에 실패했습니다.");
+            }
+        }
+
+        async function logout() {
+            try {
+                await signOut(auth);
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Logout failed:", error);
+            }
+        }
+
+        // 초기화 함수
         async function init() {
             const today = new Date();
             const todayStr = today.toISOString().split('T')[0];
-            
             const lastYear = new Date();
             lastYear.setFullYear(today.getFullYear() - 1);
-            const lastYearStr = lastYear.toISOString().split('T')[0];
-
+            
             document.getElementById('add-date').value = todayStr;
-            document.getElementById('filter-start').value = lastYearStr;
+            // 에러 수정된 부분: lastYearStr.toISOString() 대신 lastYear.toISOString() 사용
+            document.getElementById('filter-start').value = lastYear.toISOString().split('T')[0];
             document.getElementById('filter-end').value = todayStr;
-
+            
             try {
-                // Firestore에서 모든 데이터 가져오기
+                if(!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.warn("익명 로그인 실패 (Firebase Authentication 설정 필요):", error);
+            }
+
+            renderTable(); 
+        }
+
+        async function loadDataFromFirestore() {
+            try {
                 const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
                 records = [];
                 querySnapshot.forEach((doc) => {
                     records.push(doc.data());
                 });
+                renderTable();
             } catch (error) {
-                console.error("Firebase 데이터 로드 오류:", error);
-                alert("데이터베이스에서 기록을 불러오는데 실패했습니다.");
+                console.error("데이터 로드 오류:", error);
+                alert("❌ [데이터베이스 오류]\nFirestore 규칙이 잘못 설정되었습니다.\n\nFirebase 콘솔의 [Firestore Database -> 규칙] 탭에\n올바른 코드를 넣었는지 확인해주세요.");
             }
-
-            renderTable();
         }
 
-        // ================= 다중 첨부파일 로직 =================
+        // ================= 다중 첨부파일 로직 (스토리지 미사용, Base64 직접 저장) =================
         function handleFileSelect(input, type) {
             if (!input.files || input.files.length === 0) return;
-            
             if (!tempFiles[type]) tempFiles[type] = [];
 
             Array.from(input.files).forEach(file => {
-                // 용량 체크 (10MB 제한)
-                const maxSize = 10 * 1024 * 1024;
+                
+                // 💡 [추후 스토리지 연동 시 수정할 부분] 
+                // 3. 파일 용량 제한을 늘려주세요. (예: 20 * 1024 * 1024 -> 20MB)
+                const maxSize = 700 * 1024; // 현재는 데이터베이스 용도 700KB 제한
                 if (file.size > maxSize) {
-                    alert(`'${file.name}' 파일이 너무 큽니다. (최대 10MB 권장)`);
+                    alert(`'${file.name}' 파일이 너무 큽니다.\n스토리지 기능을 사용하지 않으므로 700KB 이하의 가벼운 파일만 첨부 가능합니다.`);
                     return;
                 }
-
-                tempFiles[type].push({
-                    name: file.name,
-                    file: file,
-                    mimeType: file.type,
-                    isNew: true,
-                    url: URL.createObjectURL(file) // 로컬 미리보기용 임시 URL
-                });
-                renderFileList(type);
+                
+                // 💡 [추후 스토리지 연동 시 수정할 부분] 
+                // 4. 스토리지 연동 시, 아래의 FileReader 로직을 삭제하고 
+                // URL.createObjectURL(file) 과 원본 file 객체만 tempFiles에 넣는 방식으로 되돌려야 합니다.
+                
+                // 파일을 Base64 문자열로 변환하여 메모리에 저장 (현재 방식)
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    tempFiles[type].push({
+                        name: file.name,
+                        data: e.target.result, // Base64 직접 저장
+                        mimeType: file.type
+                    });
+                    renderFileList(type);
+                };
+                reader.readAsDataURL(file);
             });
             input.value = ''; 
         }
 
         function removeFile(type, index) {
             if (tempFiles[type]) {
-                const fileObj = tempFiles[type][index];
-                // 기존 Storage에 있던 파일이면 삭제 예정 목록에 추가
-                if (!fileObj.isNew && fileObj.storagePath) {
-                    filesToDelete.push(fileObj.storagePath);
-                }
+                // 💡 [추후 스토리지 연동 시 수정할 부분]
+                // 5. 스토리지 연동 시, 여기서 삭제하려는 파일이 기존에 스토리지에 저장되어 있던 파일인지 확인하고, 
+                // 맞다면 filesToDelete 배열에 경로를 추가하는 로직을 되살려야 합니다.
+                
                 tempFiles[type].splice(index, 1);
                 renderFileList(type);
             }
@@ -713,12 +795,10 @@
         function renderFileList(type) {
             const container = document.getElementById(`disp-${type}`);
             container.innerHTML = '';
-            
             const files = tempFiles[type] || [];
             if (files.length > 0) {
                 container.classList.remove('hidden');
                 container.classList.add('flex');
-                
                 files.forEach((f, idx) => {
                     const item = document.createElement('div');
                     item.className = "flex items-center justify-between bg-blue-50 px-2 py-1.5 rounded text-xs text-blue-700 border border-blue-100 w-full";
@@ -749,17 +829,13 @@
         function togglePreviewFullscreen() {
             const container = document.getElementById('preview-container');
             const icon = document.getElementById('preview-fullscreen-icon');
-            
             isPreviewFullscreen = !isPreviewFullscreen;
-            
             if (isPreviewFullscreen) {
-                // 전체화면 모드
                 container.classList.remove('max-w-4xl', 'max-h-[90vh]', 'rounded-xl');
                 container.classList.add('max-w-[95vw]', 'h-[95vh]', 'rounded-lg');
                 icon.classList.remove('ph-arrows-out');
                 icon.classList.add('ph-arrows-in');
             } else {
-                // 기본 모드
                 container.classList.remove('max-w-[95vw]', 'h-[95vh]', 'rounded-lg');
                 container.classList.add('max-w-4xl', 'max-h-[90vh]', 'rounded-xl');
                 icon.classList.remove('ph-arrows-in');
@@ -769,39 +845,32 @@
 
         function previewFile(type, index) {
             const fileObj = tempFiles[type][index];
-            if(!fileObj) return;
-
-            if(!fileObj.url) {
-                alert('파일의 데이터가 존재하지 않습니다.');
-                return;
-            }
+            
+            // 💡 [추후 스토리지 연동 시 수정할 부분]
+            // 스토리지 연동 시 fileObj.url 로 미리보기를 띄우도록 수정해야 합니다. 
+            // 현재는 fileObj.data(Base64) 로 띄웁니다.
+            if(!fileObj || !fileObj.data) return;
 
             const modal = document.getElementById('previewModal');
             document.getElementById('preview-filename').textContent = fileObj.name;
             const content = document.getElementById('preview-content');
             const downloadBtn = document.getElementById('preview-download-btn');
-            
             content.innerHTML = ''; 
             
             if (fileObj.mimeType.startsWith('image/')) {
-                content.innerHTML = `<img src="${fileObj.url}" class="max-w-full max-h-full object-contain mx-auto shadow-sm">`;
+                content.innerHTML = `<img src="${fileObj.data}" class="max-w-full max-h-full object-contain mx-auto shadow-sm">`;
             } else if (fileObj.mimeType === 'application/pdf') {
-                content.innerHTML = `<iframe src="${fileObj.url}" class="w-full h-full min-h-[65vh] border-0 rounded"></iframe>`;
+                content.innerHTML = `<iframe src="${fileObj.data}" class="w-full h-full min-h-[65vh] border-0 rounded"></iframe>`;
             } else {
                 content.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="ph ph-file-text text-6xl mb-2 text-gray-300"></i><p>미리보기를 지원하지 않는 파일 형식입니다.<br>다운로드하여 확인해주세요.</p></div>`;
             }
             
             downloadBtn.onclick = () => {
-                if (fileObj.isNew) {
-                    const a = document.createElement('a');
-                    a.href = fileObj.url;
-                    a.download = fileObj.name;
-                    a.click();
-                } else {
-                    window.open(fileObj.url, '_blank');
-                }
+                const a = document.createElement('a');
+                a.href = fileObj.data;
+                a.download = fileObj.name;
+                a.click();
             };
-
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -811,14 +880,10 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             document.getElementById('preview-content').innerHTML = '';
-            
-            // 닫을 때 원래 크기로 초기화
-            if(isPreviewFullscreen) {
-                togglePreviewFullscreen();
-            }
+            if(isPreviewFullscreen) togglePreviewFullscreen();
         }
 
-        // ================= 신규 데이터 등록 (Firestore) =================
+        // ================= 신규 데이터 등록 =================
         function openAddModal() {
             document.getElementById('addModal').classList.remove('hidden');
             document.getElementById('addModal').classList.add('flex');
@@ -851,10 +916,7 @@
             };
 
             try {
-                // Firestore 문서 추가
                 await setDoc(doc(db, COLLECTION_NAME, newRecord.id), newRecord);
-                
-                // 로컬 배열 추가 및 테이블 갱신
                 records.push(newRecord);
                 document.getElementById('searchInput').value = '';
                 renderTable();
@@ -871,10 +933,8 @@
             if (!record) return;
             currentEditId = id;
             tempFiles = {}; 
-            filesToDelete = []; // 삭제 대기열 초기화
             
             document.getElementById('det-status').value = record.status;
-
             baseFields.forEach(field => {
                 document.getElementById(`det-base-${field}`).value = record[field] || '';
             });
@@ -882,14 +942,12 @@
             const det = record.details || {};
             detailFields.forEach(field => {
                 let val = det[field] || '';
-
                 if (!val) {
                     if (field === 'mekStd' || field === 'extMekStd') val = '50회';
                     if (field === 'tbendStd' || field === 'extTbendStd') val = '2TT 4점(박리 없음)';
                     if (field === 'cetStd' || field === 'extCetStd') val = '100/100(박리 없음)';
                     if (field === 'impactStd' || field === 'extImpactStd') val = '5점(박리없음)';
                 }
-                
                 const el = document.getElementById(`det-${field}`);
                 if(el) el.value = val;
             });
@@ -911,7 +969,6 @@
             document.getElementById('detailModal').classList.add('hidden');
             document.getElementById('detailModal').classList.remove('flex');
             currentEditId = null;
-            filesToDelete = []; // 삭제 대기열 초기화
         }
 
         async function saveDetailData() {
@@ -921,11 +978,10 @@
 
             const saveBtn = document.getElementById('save-detail-btn');
             const originalBtnHtml = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> 파일 업로드 및 저장중...';
+            saveBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> 저장중...';
             saveBtn.disabled = true;
 
             try {
-                // 로컬 객체 업데이트 준비
                 const updatedRecord = { ...records[recordIndex] };
                 updatedRecord.status = document.getElementById('det-status').value;
 
@@ -939,60 +995,36 @@
                     if(el) updatedDetails[field] = el.value;
                 });
 
-                // 1. Firebase Storage에 새 파일 업로드 처리
-                for (const type of fileFields) {
-                    const finalFiles = [];
-                    for (const fileObj of (tempFiles[type] || [])) {
-                        if (fileObj.isNew && fileObj.file) {
-                            // 새 파일인 경우 Storage에 업로드
-                            const storagePath = `attachments/${currentEditId}/${type}/${Date.now()}_${fileObj.name}`;
-                            const storageRef = ref(storage, storagePath);
-                            await uploadBytes(storageRef, fileObj.file);
-                            const downloadUrl = await getDownloadURL(storageRef);
-                            
-                            finalFiles.push({
-                                name: fileObj.name,
-                                url: downloadUrl,
-                                mimeType: fileObj.mimeType,
-                                storagePath: storagePath,
-                                isNew: false
-                            });
-                        } else {
-                            // 기존 파일 유지
-                            finalFiles.push(fileObj);
-                        }
-                    }
-                    updatedDetails[`${type}Files`] = finalFiles;
-                }
+                // 💡 [추후 스토리지 연동 시 수정할 부분]
+                // 6. 스토리지 연동 시 이 부분을 Storage uploadBytes 로직으로 교체해야 합니다.
+                // 스토리지 기능 제외: 파일의 Base64 데이터를 그대로 배열에 보존하여 데이터베이스에 직행
+                fileFields.forEach(type => {
+                    updatedDetails[`${type}Files`] = tempFiles[type] || [];
+                });
 
                 updatedRecord.details = updatedDetails;
                 
-                // 2. Firestore 문서 업데이트 (링크만 저장)
+                // Firestore 문서 업데이트
                 await setDoc(doc(db, COLLECTION_NAME, currentEditId), updatedRecord);
                 
-                // 3. Storage에서 삭제 예정인 이전 파일들 정리
-                for (const path of filesToDelete) {
-                    try {
-                        await deleteObject(ref(storage, path));
-                    } catch(e) { console.warn("이전 파일 삭제 실패 (무시됨):", e); }
-                }
-                filesToDelete = [];
-
-                // 성공 시 로컬 배열 업데이트 및 렌더링
                 records[recordIndex] = updatedRecord;
                 renderTable();
                 closeDetailModal();
                 alert('정보가 성공적으로 저장되었습니다.');
             } catch (error) {
-                console.error("데이터베이스 업데이트 오류:", error);
-                alert('정보 저장 중 오류가 발생했습니다: ' + error.message);
+                console.error("저장 중 오류 발생:", error);
+                
+                // 용량 초과 에러(Firestore 1MB 문서 제한) 처리
+                if (error.code === 'resource-exhausted' || (error.message && error.message.includes('maximum'))) {
+                    alert('저장 실패: 첨부파일의 용량이 너무 큽니다.\n(데이터베이스 1MB 한도 초과)\n\n불필요하거나 큰 파일을 지우고 다시 시도하세요.');
+                } else {
+                    alert('저장 중 오류 발생: ' + error.message);
+                }
             } finally {
-                // 버튼 상태 원상복구
                 saveBtn.innerHTML = originalBtnHtml;
                 saveBtn.disabled = false;
             }
         }
-
 
         // ================= 테이블 UI =================
         function getStatusBadge(status) {
@@ -1066,14 +1098,10 @@
             event.stopPropagation();
             if(confirm('이 기록을 정말 삭제하시겠습니까?')) {
                 try {
-                    // Firestore에서 삭제
                     await deleteDoc(doc(db, COLLECTION_NAME, id));
-                    
-                    // 로컬 반영
                     records = records.filter(record => record.id !== id);
                     renderTable();
                 } catch (error) {
-                    console.error("문서 삭제 중 오류:", error);
                     alert("삭제에 실패했습니다.");
                 }
             }
@@ -1083,18 +1111,15 @@
             if(records.length === 0) return;
             if(confirm('모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
                 try {
-                    // Firestore 일괄 삭제
                     const batch = writeBatch(db);
                     records.forEach(r => {
                         batch.delete(doc(db, COLLECTION_NAME, r.id));
                     });
                     await batch.commit();
-
                     records = [];
                     renderTable();
                     alert("모든 데이터가 삭제되었습니다.");
                 } catch (error) {
-                    console.error("일괄 삭제 오류:", error);
                     alert("데이터 초기화에 실패했습니다.");
                 }
             }
@@ -1110,7 +1135,7 @@
             document.getElementById('stat-completed').textContent = completed;
         }
 
-        // ================= 엑셀 다운로드 (SheetJS) =================
+        // ================= 엑셀 다운로드 =================
         function exportToExcel() {
             if (records.length === 0) {
                 alert('내보낼 데이터가 없습니다.');
@@ -1181,12 +1206,10 @@
             worksheet['!cols'] = wscols;
 
             XLSX.utils.book_append_sheet(workbook, worksheet, "테스트 현황");
-            
             const today = new Date().toISOString().split('T')[0];
             XLSX.writeFile(workbook, `원소재_도장TEST_진행현황_${today}.xlsx`);
         }
 
-        // ES Module 환경에서 HTML의 onclick 등 속성으로 함수를 호출하려면 window 객체에 등록해야 합니다.
         window.renderTable = renderTable;
         window.exportToExcel = exportToExcel;
         window.clearAllData = clearAllData;
@@ -1201,6 +1224,8 @@
         window.closePreviewModal = closePreviewModal;
         window.togglePreviewFullscreen = togglePreviewFullscreen;
         window.deleteRecord = deleteRecord;
+        window.loginWithGoogle = loginWithGoogle;
+        window.logout = logout;
 
         init();
     </script>

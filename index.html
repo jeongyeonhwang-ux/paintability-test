@@ -207,6 +207,14 @@
                 <button onclick="closeDetailModal()" class="text-gray-300 hover:text-white transition-colors"><i class="ph ph-x text-2xl"></i></button>
             </div>
             
+            <!-- 첨부파일 용량 경고 문구 추가 -->
+            <div class="bg-red-50 px-6 py-2 border-b border-red-100 shrink-0">
+                <p class="text-red-600 text-xs font-bold flex items-center gap-1">
+                    <i class="ph-fill ph-warning-circle text-sm"></i>
+                    첨부파일 용량 안내: 개별 파일당 최대 10MB 이하를 권장합니다.
+                </p>
+            </div>
+
             <!-- Body -->
             <div class="p-6 overflow-y-auto flex-1 bg-gray-50/50">
                 
@@ -282,10 +290,6 @@
                     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm lg:col-span-1 flex flex-col">
                         <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
                             <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-ruler text-blue-500"></i> 규격 및 도금량</h4>
-                            <div class="flex flex-col items-end gap-1">
-                                <input type="file" id="file-spec" multiple class="hidden" onchange="handleFileSelect(this, 'spec')">
-                                <button onclick="document.getElementById('file-spec').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
-                            </div>
                         </div>
                         <div class="space-y-3 flex-1">
                             <div>
@@ -306,8 +310,6 @@
                             </div>
                         </div>
                         <div class="mt-4 pt-3 border-t border-gray-50">
-                            <!-- 파일명 표시 영역 -->
-                            <div id="disp-spec" class="hidden flex-col gap-1 mb-2"></div>
                             <label class="block text-xs text-gray-500 mb-1">비고</label>
                             <input type="text" id="det-specRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
                         </div>
@@ -317,10 +319,6 @@
                     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm lg:col-span-1 flex flex-col">
                         <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
                             <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-wrench text-blue-500"></i> 기계적 물성</h4>
-                            <div class="flex flex-col items-end gap-1">
-                                <input type="file" id="file-mech" multiple class="hidden" onchange="handleFileSelect(this, 'mech')">
-                                <button onclick="document.getElementById('file-mech').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
-                            </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3 flex-1">
                             <div>
@@ -345,7 +343,6 @@
                             </div>
                         </div>
                         <div class="mt-4 pt-3 border-t border-gray-50">
-                            <div id="disp-mech" class="hidden flex-col gap-1 mb-2"></div>
                             <label class="block text-xs text-gray-500 mb-1">비고</label>
                             <input type="text" id="det-mechRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
                         </div>
@@ -355,10 +352,6 @@
                     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm lg:col-span-1 flex flex-col">
                         <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
                             <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-flask text-blue-500"></i> 무기 성분 분석 (%)</h4>
-                            <div class="flex flex-col items-end gap-1">
-                                <input type="file" id="file-comp" multiple class="hidden" onchange="handleFileSelect(this, 'comp')">
-                                <button onclick="document.getElementById('file-comp').click()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded flex items-center gap-1 transition-colors"><i class="ph ph-paperclip"></i> 첨부</button>
-                            </div>
                         </div>
                         <div class="grid grid-cols-3 gap-3 flex-1">
                             <div>
@@ -387,7 +380,6 @@
                             </div>
                         </div>
                         <div class="mt-4 pt-3 border-t border-gray-50">
-                            <div id="disp-comp" class="hidden flex-col gap-1 mb-2"></div>
                             <label class="block text-xs text-gray-500 mb-1">비고</label>
                             <input type="text" id="det-compRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
                         </div>
@@ -570,7 +562,7 @@
             <!-- Footer -->
             <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2 bg-white shrink-0">
                 <button onclick="closeDetailModal()" class="px-5 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">닫기</button>
-                <button onclick="saveDetailData()" class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"><i class="ph ph-floppy-disk"></i> 저장 및 수정완료</button>
+                <button id="save-detail-btn" onclick="saveDetailData()" class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"><i class="ph ph-floppy-disk"></i> 저장 및 수정완료</button>
             </div>
         </div>
     </div>
@@ -607,6 +599,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCKeuSbvuaUt9MVKhsSIihUKW-cngA4wgo",
@@ -620,11 +613,13 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app);
         const COLLECTION_NAME = "coatingTestRecords"; // Firestore에 저장될 컬렉션 이름
 
         let records = [];
         let currentEditId = null;
         let tempFiles = {}; 
+        let filesToDelete = []; // 삭제 예정인 Storage 파일 경로
 
         const tableBody = document.getElementById('tableBody');
         const emptyState = document.getElementById('emptyState');
@@ -647,7 +642,7 @@
             'conclusion'
         ];
 
-        const fileFields = ['mct', 'spec', 'mech', 'comp', 'paint', 'ext'];
+        const fileFields = ['mct', 'paint', 'ext'];
 
         // 초기화 함수 (데이터베이스에서 불러오기)
         async function init() {
@@ -684,22 +679,32 @@
             if (!tempFiles[type]) tempFiles[type] = [];
 
             Array.from(input.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    tempFiles[type].push({
-                        name: file.name,
-                        data: e.target.result,
-                        mimeType: file.type
-                    });
-                    renderFileList(type);
-                };
-                reader.readAsDataURL(file);
+                // 용량 체크 (10MB 제한)
+                const maxSize = 10 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    alert(`'${file.name}' 파일이 너무 큽니다. (최대 10MB 권장)`);
+                    return;
+                }
+
+                tempFiles[type].push({
+                    name: file.name,
+                    file: file,
+                    mimeType: file.type,
+                    isNew: true,
+                    url: URL.createObjectURL(file) // 로컬 미리보기용 임시 URL
+                });
+                renderFileList(type);
             });
             input.value = ''; 
         }
 
         function removeFile(type, index) {
             if (tempFiles[type]) {
+                const fileObj = tempFiles[type][index];
+                // 기존 Storage에 있던 파일이면 삭제 예정 목록에 추가
+                if (!fileObj.isNew && fileObj.storagePath) {
+                    filesToDelete.push(fileObj.storagePath);
+                }
                 tempFiles[type].splice(index, 1);
                 renderFileList(type);
             }
@@ -766,7 +771,7 @@
             const fileObj = tempFiles[type][index];
             if(!fileObj) return;
 
-            if(!fileObj.data) {
+            if(!fileObj.url) {
                 alert('파일의 데이터가 존재하지 않습니다.');
                 return;
             }
@@ -779,18 +784,22 @@
             content.innerHTML = ''; 
             
             if (fileObj.mimeType.startsWith('image/')) {
-                content.innerHTML = `<img src="${fileObj.data}" class="max-w-full max-h-full object-contain mx-auto shadow-sm">`;
+                content.innerHTML = `<img src="${fileObj.url}" class="max-w-full max-h-full object-contain mx-auto shadow-sm">`;
             } else if (fileObj.mimeType === 'application/pdf') {
-                content.innerHTML = `<iframe src="${fileObj.data}" class="w-full h-full min-h-[65vh] border-0 rounded"></iframe>`;
+                content.innerHTML = `<iframe src="${fileObj.url}" class="w-full h-full min-h-[65vh] border-0 rounded"></iframe>`;
             } else {
                 content.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="ph ph-file-text text-6xl mb-2 text-gray-300"></i><p>미리보기를 지원하지 않는 파일 형식입니다.<br>다운로드하여 확인해주세요.</p></div>`;
             }
             
             downloadBtn.onclick = () => {
-                const a = document.createElement('a');
-                a.href = fileObj.data;
-                a.download = fileObj.name;
-                a.click();
+                if (fileObj.isNew) {
+                    const a = document.createElement('a');
+                    a.href = fileObj.url;
+                    a.download = fileObj.name;
+                    a.click();
+                } else {
+                    window.open(fileObj.url, '_blank');
+                }
             };
 
             modal.classList.remove('hidden');
@@ -862,6 +871,7 @@
             if (!record) return;
             currentEditId = id;
             tempFiles = {}; 
+            filesToDelete = []; // 삭제 대기열 초기화
             
             document.getElementById('det-status').value = record.status;
 
@@ -901,6 +911,7 @@
             document.getElementById('detailModal').classList.add('hidden');
             document.getElementById('detailModal').classList.remove('flex');
             currentEditId = null;
+            filesToDelete = []; // 삭제 대기열 초기화
         }
 
         async function saveDetailData() {
@@ -908,42 +919,77 @@
             const recordIndex = records.findIndex(r => r.id === currentEditId);
             if (recordIndex === -1) return;
 
-            // 로컬 객체 업데이트 준비
-            const updatedRecord = { ...records[recordIndex] };
-            updatedRecord.status = document.getElementById('det-status').value;
+            const saveBtn = document.getElementById('save-detail-btn');
+            const originalBtnHtml = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> 파일 업로드 및 저장중...';
+            saveBtn.disabled = true;
 
-            baseFields.forEach(field => {
-                updatedRecord[field] = document.getElementById(`det-base-${field}`).value;
-            });
-
-            const updatedDetails = {};
-            detailFields.forEach(field => {
-                const el = document.getElementById(`det-${field}`);
-                if(el) updatedDetails[field] = el.value;
-            });
-
-            fileFields.forEach(type => {
-                updatedDetails[`${type}Files`] = tempFiles[type] || [];
-            });
-
-            updatedRecord.details = updatedDetails;
-            
             try {
-                // Firestore 문서 업데이트
+                // 로컬 객체 업데이트 준비
+                const updatedRecord = { ...records[recordIndex] };
+                updatedRecord.status = document.getElementById('det-status').value;
+
+                baseFields.forEach(field => {
+                    updatedRecord[field] = document.getElementById(`det-base-${field}`).value;
+                });
+
+                const updatedDetails = {};
+                detailFields.forEach(field => {
+                    const el = document.getElementById(`det-${field}`);
+                    if(el) updatedDetails[field] = el.value;
+                });
+
+                // 1. Firebase Storage에 새 파일 업로드 처리
+                for (const type of fileFields) {
+                    const finalFiles = [];
+                    for (const fileObj of (tempFiles[type] || [])) {
+                        if (fileObj.isNew && fileObj.file) {
+                            // 새 파일인 경우 Storage에 업로드
+                            const storagePath = `attachments/${currentEditId}/${type}/${Date.now()}_${fileObj.name}`;
+                            const storageRef = ref(storage, storagePath);
+                            await uploadBytes(storageRef, fileObj.file);
+                            const downloadUrl = await getDownloadURL(storageRef);
+                            
+                            finalFiles.push({
+                                name: fileObj.name,
+                                url: downloadUrl,
+                                mimeType: fileObj.mimeType,
+                                storagePath: storagePath,
+                                isNew: false
+                            });
+                        } else {
+                            // 기존 파일 유지
+                            finalFiles.push(fileObj);
+                        }
+                    }
+                    updatedDetails[`${type}Files`] = finalFiles;
+                }
+
+                updatedRecord.details = updatedDetails;
+                
+                // 2. Firestore 문서 업데이트 (링크만 저장)
                 await setDoc(doc(db, COLLECTION_NAME, currentEditId), updatedRecord);
                 
+                // 3. Storage에서 삭제 예정인 이전 파일들 정리
+                for (const path of filesToDelete) {
+                    try {
+                        await deleteObject(ref(storage, path));
+                    } catch(e) { console.warn("이전 파일 삭제 실패 (무시됨):", e); }
+                }
+                filesToDelete = [];
+
                 // 성공 시 로컬 배열 업데이트 및 렌더링
                 records[recordIndex] = updatedRecord;
                 renderTable();
                 closeDetailModal();
                 alert('정보가 성공적으로 저장되었습니다.');
             } catch (error) {
-                if (error.code === 'resource-exhausted' || (error.message && error.message.includes('maximum'))) {
-                    alert('저장 실패: 첨부파일의 용량이 너무 큽니다. (1회당 최대 1MB 권장) 불필요한 파일을 지우고 다시 시도하세요.');
-                } else {
-                    console.error("데이터베이스 업데이트 오류:", error);
-                    alert('정보 저장 중 오류가 발생했습니다.');
-                }
+                console.error("데이터베이스 업데이트 오류:", error);
+                alert('정보 저장 중 오류가 발생했습니다: ' + error.message);
+            } finally {
+                // 버튼 상태 원상복구
+                saveBtn.innerHTML = originalBtnHtml;
+                saveBtn.disabled = false;
             }
         }
 

@@ -577,14 +577,21 @@
 
     <!-- ==================== [MODAL] 파일 미리보기 ==================== -->
     <div id="previewModal" class="hidden fixed inset-0 bg-gray-900/80 z-[60] items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div id="preview-container" class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300">
             <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center bg-gray-50 shrink-0">
                 <h3 id="preview-title" class="font-bold text-gray-800 truncate pr-4 text-sm flex items-center gap-2">
                     <i class="ph ph-file"></i> <span id="preview-filename">파일명</span>
                 </h3>
-                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-700 transition-colors"><i class="ph ph-x text-xl"></i></button>
+                <div class="flex items-center gap-3">
+                    <button onclick="togglePreviewFullscreen()" class="text-gray-500 hover:text-blue-600 transition-colors p-1" title="크기 전환">
+                        <i id="preview-fullscreen-icon" class="ph ph-arrows-out text-xl"></i>
+                    </button>
+                    <button onclick="closePreviewModal()" class="text-gray-500 hover:text-red-600 transition-colors p-1" title="닫기">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
             </div>
-            <div id="preview-content" class="p-4 flex-1 overflow-auto bg-gray-100 flex items-center justify-center">
+            <div id="preview-content" class="p-4 flex-1 overflow-auto bg-gray-100 flex items-center justify-center relative">
                 <!-- 이미지 또는 PDF 표시 영역 -->
             </div>
             <div class="px-4 py-3 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
@@ -731,6 +738,30 @@
             }
         }
 
+        // ================= 미리보기 및 확대/축소 로직 =================
+        let isPreviewFullscreen = false;
+
+        function togglePreviewFullscreen() {
+            const container = document.getElementById('preview-container');
+            const icon = document.getElementById('preview-fullscreen-icon');
+            
+            isPreviewFullscreen = !isPreviewFullscreen;
+            
+            if (isPreviewFullscreen) {
+                // 전체화면 모드
+                container.classList.remove('max-w-4xl', 'max-h-[90vh]', 'rounded-xl');
+                container.classList.add('max-w-[95vw]', 'h-[95vh]', 'rounded-lg');
+                icon.classList.remove('ph-arrows-out');
+                icon.classList.add('ph-arrows-in');
+            } else {
+                // 기본 모드
+                container.classList.remove('max-w-[95vw]', 'h-[95vh]', 'rounded-lg');
+                container.classList.add('max-w-4xl', 'max-h-[90vh]', 'rounded-xl');
+                icon.classList.remove('ph-arrows-in');
+                icon.classList.add('ph-arrows-out');
+            }
+        }
+
         function previewFile(type, index) {
             const fileObj = tempFiles[type][index];
             if(!fileObj) return;
@@ -750,7 +781,7 @@
             if (fileObj.mimeType.startsWith('image/')) {
                 content.innerHTML = `<img src="${fileObj.data}" class="max-w-full max-h-full object-contain mx-auto shadow-sm">`;
             } else if (fileObj.mimeType === 'application/pdf') {
-                content.innerHTML = `<iframe src="${fileObj.data}" class="w-full h-[65vh] border-0 rounded"></iframe>`;
+                content.innerHTML = `<iframe src="${fileObj.data}" class="w-full h-full min-h-[65vh] border-0 rounded"></iframe>`;
             } else {
                 content.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="ph ph-file-text text-6xl mb-2 text-gray-300"></i><p>미리보기를 지원하지 않는 파일 형식입니다.<br>다운로드하여 확인해주세요.</p></div>`;
             }
@@ -771,6 +802,11 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             document.getElementById('preview-content').innerHTML = '';
+            
+            // 닫을 때 원래 크기로 초기화
+            if(isPreviewFullscreen) {
+                togglePreviewFullscreen();
+            }
         }
 
         // ================= 신규 데이터 등록 (Firestore) =================
@@ -1117,6 +1153,7 @@
         window.removeFile = removeFile;
         window.previewFile = previewFile;
         window.closePreviewModal = closePreviewModal;
+        window.togglePreviewFullscreen = togglePreviewFullscreen;
         window.deleteRecord = deleteRecord;
 
         init();

@@ -374,6 +374,37 @@
                         <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-4">
                             <h4 class="font-bold text-gray-800 text-sm flex items-center gap-1 mt-1"><i class="ph ph-flask text-blue-500"></i> 무기 성분 분석 (%)</h4>
                         </div>
+                        <!-- 첫 번째 줄: Zn, Al, Mg -->
+                        <div class="grid grid-cols-3 gap-3 flex-1 mb-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Zn</label>
+                                <input type="text" id="det-compZn" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Al</label>
+                                <input type="text" id="det-compAl" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Mg</label>
+                                <input type="text" id="det-compMg" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+                        <!-- 두 번째 줄: Fe, Si, Cr -->
+                        <div class="grid grid-cols-3 gap-3 flex-1 mb-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Fe</label>
+                                <input type="text" id="det-compFe" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Si</label>
+                                <input type="text" id="det-compSi" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Cr</label>
+                                <input type="text" id="det-compCr" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                            </div>
+                        </div>
+                        <!-- 세 번째 줄: C, O, 기타 -->
                         <div class="grid grid-cols-3 gap-3 flex-1">
                             <div>
                                 <label class="block text-xs text-gray-500 mb-1">C</label>
@@ -384,22 +415,11 @@
                                 <input type="text" id="det-compO" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Mg</label>
-                                <input type="text" id="det-compMg" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-1">Al</label>
-                                <input type="text" id="det-compAl" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-1">Fe</label>
-                                <input type="text" id="det-compFe" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-1">Zn</label>
-                                <input type="text" id="det-compZn" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
+                                <label class="block text-xs text-gray-500 mb-1">기타</label>
+                                <input type="text" id="det-compEtc" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
                             </div>
                         </div>
+                        
                         <div class="mt-4 pt-3 border-t border-gray-50">
                             <label class="block text-xs text-gray-500 mb-1">비고</label>
                             <input type="text" id="det-compRemarks" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-blue-500 outline-none">
@@ -661,7 +681,7 @@
         const detailFields = [
             'thickness', 'realThickness', 'coatingTarget', 'coatingReal', 'specRemarks',
             'ts', 'yp', 'el', 'hardness', 'roughness', 'mechRemarks',
-            'compC', 'compO', 'compMg', 'compAl', 'compFe', 'compZn', 'compRemarks',
+            'compZn', 'compAl', 'compMg', 'compFe', 'compSi', 'compCr', 'compC', 'compO', 'compEtc', 'compRemarks',
             'mekStd', 'mekMeas', 'tbendStd', 'tbendMeas', 'cetStd', 'cetMeas', 'impactStd', 'impactMeas', 'paintRemarks',
             'extTitle', 'extMekStd', 'extMekMeas', 'extTbendStd', 'extTbendMeas', 'extCetStd', 'extCetMeas', 'extImpactStd', 'extImpactMeas', 'extRemarks',
             'conclusion'
@@ -996,7 +1016,7 @@
                 });
 
                 // 💡 [추후 스토리지 연동 시 수정할 부분]
-                // 6. 스토리지 연동 시 이 부분을 Storage uploadBytes 로직으로 교체해야 합니다.
+                // 6. 스토리지 연동 시 이 부분은 Storage uploadBytes 로직으로 교체해야 합니다.
                 // 스토리지 기능 제외: 파일의 Base64 데이터를 그대로 배열에 보존하여 데이터베이스에 직행
                 fileFields.forEach(type => {
                     updatedDetails[`${type}Files`] = tempFiles[type] || [];
@@ -1166,12 +1186,15 @@
                     '조도': det.roughness || '',
                     '기계물성 비고': det.mechRemarks || '',
                     
+                    'Zn (%)': det.compZn || '',
+                    'Al (%)': det.compAl || '',
+                    'Mg (%)': det.compMg || '',
+                    'Fe (%)': det.compFe || '',
+                    'Si (%)': det.compSi || '',
+                    'Cr (%)': det.compCr || '',
                     'C (%)': det.compC || '',
                     'O (%)': det.compO || '',
-                    'Mg (%)': det.compMg || '',
-                    'Al (%)': det.compAl || '',
-                    'Fe (%)': det.compFe || '',
-                    'Zn (%)': det.compZn || '',
+                    '기타 (%)': det.compEtc || '',
                     '성분분석 비고': det.compRemarks || '',
                     
                     'M.E.K (당사기준)': det.mekStd || '',
